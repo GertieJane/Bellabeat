@@ -79,7 +79,7 @@ da_averages <- daily_activity_v2 %>%
              min_date= min(ActivityDate), max_date= max(ActivityDate))
 
 
-#Boxplot for total_records
+#Boxplot for total_records to show what falls outside of the average
 ggplot(data = da_averages, aes(x = factor(1), y = total_records)) +
   geom_boxplot() +
   theme_minimal()+
