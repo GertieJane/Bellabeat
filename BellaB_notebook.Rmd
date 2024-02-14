@@ -1,0 +1,700 @@
+---
+title: "Bellabeat Case study"
+author: "Sarah Lamb"
+Date: "2024-02-09"
+output:
+  html_document:
+    df_print: paged
+    toc: true
+    toc_depth: 2
+    toc_float: true
+---
+
+
+```{r include=FALSE}
+library(knitr)
+knitr::opts_chunk$set(fig.path = "C:/Users/Sarah Jane/OneDrive/Documents/R_data_sources/Bellabeat_case_study/images/", echo = FALSE)
+```
+
+# How can a Wellness Tech Company Play it Smart?
+
+
+```{r setup, echo= TRUE}
+library(tidyverse)
+library(skimr)
+
+```
+
+![Bellabeat Logo](images/bellabeat_logo.png)
+
+#### Analysis in RStudio
+
+
+## <span style= "color:#f28b74;">Introduction</span>
+
+Bellabeat manufactures high-tech health products targeted towards women. Their goal is to become more prominent in the global smart device market. For this case study, I will focus on one of Bellabeat's wellness trackers, the Leaf. Consumers can wear this device on a necklace, bracelet, or clip. The Leaf is a smart device, and in conjunction with the Bellabeat app, it tracks and reports the user's daily activity, sleep, wellness, and stress.   
+
+* __Stakeholders__
+   * Co-founders
+      * Urska Srsen: Co-founder, CCO
+      * Sando Mur: Co-founder, Key Executive team member
+         * Goal for analysis: Insights for growth opportunities
+   * Marketing Analytics Team
+      * Goals for analysis:
+         * Insights and trends on popular features
+         * Targeted ads, promotions, and further research
+* __Business Task__
+   * Analyze open-source FitBit Fitness Tracker Data (CCO: Public Domain, data set provided by Mobius) for insights that are applicable to a similar Bellabeat product like the Leaf. Identify trends to guide the marketing strategy.
+* __Questions to answer__
+   * What are some trends in smart device usage?
+   * How do these trends apply to Bellabeat's customers?
+   * How can these trends influence Bellabeat’s marketing strategy?
+ 
+## <span style= "color:#f28b74;">Prepare Data</span>
+
+ The Fitbit Fitness Tracker Data, a data set provided by Mobius, can be found at [kaggle](https://www.kaggle.com/datasets/arashnic/fitbit). There are 18 CSV files containing fitness tracker data from 33  users. These users consented to share their personal wellness data collected from April 12 to May 12, 2016.
+
+### Downloading and inspecting the data  
+
+ After downloading and viewing each data set in RStudio, I found that 15 are in long form with a few columns and hundreds to thousands of rows. The data is measured daily, hourly, per minute, or per second in each set, as the names of the sets suggest. Three of these data sets, minuteCaloriesWide, minuteIntensitiesWide, and minuteStepsWide, are wide, down to the minute versions of the narrow data sets. I did not see the need to include these moving forward because the narrow versions have the same information.
+ 
+   How METs are calculated according to the [Fitbit Help Center](https://support.google.com/fitbit/answer/14236509?hl=en-AU&sjid=2433625102332845804-NA#zippy=%2Chow-do-i-earn-active-zone-minutes%2Cwhy-did-i-earn-more-active-zone-minutes-than-my-workout-time%2Chow-do-i-earn-active-minutes%2Chow-does-my-fitbit-device-calculate-active-minutes) Active Minutes section:
+  
+  > "Fitbit devices calculate active minutes through metabolic equivalents (METs). This metric, which factors in your body mass, is used to estimate exercise intensity. METs are calculated through a ratio: Rate of energy expended during an activity:rate of energy expended during rest.1 MET is the rate of energy you expend during rest or sitting quietly, while you typically expend 3 METs or more during a moderately-intense activity such as walking. You earn active minutes for activities at or above about 3 METs."  
+  
+Since METs are used to calculate activity minutes, and different activity levels are already represented in the daily_activity data frame, I decided to exclude the METs data from the analysis. 
+  
+```{r import 14 files, echo=TRUE, results='hide'}
+daily_activity <- read_csv('dailyActivity_merged.csv')
+daily_sleep <- read.csv("sleepDay_merged.csv")
+heart_rate <- read_csv('heartrate_seconds_merged.csv')
+weight_log <- read_csv('weightLoginfo_merged.csv')
+hourly_intensity <- read_csv("hourlyIntensities_merged.csv")
+hourly_steps <- read_csv("hourlySteps_merged.csv")
+daily_intensities <- read_csv("dailyIntensities_merged.csv")
+
+```
+
+### Focus
+
+#### I decided to focus on daily and hourly time periods because most of the wellness metrics tracked by the participants are contained in the daily_activity data frame.Some metrics are not in daily_activity, but are in the other sets like sleep, heart rate, and some information in the weight_log. The hourly_intensities, hourly_calories, and hourly_steps data sets have data recorded per hour, every hour.
+
+
+```{r Dataframe list, echo=TRUE}
+list_named <- list('daily_activity'= daily_activity,
+                   'daily_intensities'= daily_intensities,
+                   'daily_sleep'= daily_sleep,
+                   'heart_rate'= heart_rate,
+                   'weight_log'= weight_log,
+                   'hourly_intensity'= hourly_intensity,
+                   'hourly_steps'= hourly_steps)
+                   
+head(list_named)
+```
+
+
+ 
+
+
+## <span style= "color:#f28b74;">Process Data</span>
+
+
+ The dates and date-times needed to be changed from character to date formats in all data frames. Next, I checked for duplicate records and how many distinct user IDs there were per data frame, and I made summaries for initial insights. Next, I filtered out any variables that were not useful and then sorted the data for a better picture. 
+
+### **daily_activity** clean up and initial insights
+
+```{r daily_activity, echo=TRUE}
+# Change ActivityDate from chr to date data format
+daily_activity$ActivityDate <- mdy(daily_activity$ActivityDate)
+
+# Check for duplicates
+sum(duplicated(daily_activity))
+
+# Number of distinct users= 33
+summarise(daily_activity, daily_user_count= n_distinct(Id))
+
+# Total Stats on daily_activity
+daily_activity %>%  
+  select(TotalSteps,
+         TotalDistance,
+         VeryActiveMinutes,
+         FairlyActiveMinutes,
+         LightlyActiveMinutes,
+         SedentaryMinutes, Calories) %>%
+   summary()
+
+
+glimpse(daily_activity)
+```
+
+ There are no duplicate records and 33 user IDs in daily_activity. On the first daily_activity summary, I noticed SedentaryMinutes has the most minutes across the board. This makes sense since people sit for many daily needs like desk work, driving, and eating. The maximum daily number of SedentaryMinutes is 1440, equivalent to 24 hours. While the minimum daily value for all of the variables is 0, it seems odd that the users would either not have any calories, take any steps, or not be sedentary for a whole day. It will be interesting to see how often this occurs after filtering and sorting.   
+  
+```{r daily_activity_V2, echo=TRUE}
+# Checking suspicious distance columns for usefulness 
+dist_sums<- colSums(daily_activity[, c("LoggedActivitiesDistance", "TrackerDistance","TotalDistance",
+                                       "SedentaryActiveDistance")])
+print(dist_sums)
+# Either very little information in these columns or too similar to another column  
+
+# create SedentaryHours column for easier to understand graph
+## De-select three distance columns for analysis in daily_activity_v2
+daily_activity_v2 <- daily_activity %>%
+  mutate(SedentaryHours= SedentaryMinutes/60) %>% 
+  select(-LoggedActivitiesDistance, -TrackerDistance,
+          -SedentaryActiveDistance)
+
+# Averages for daily_activity_v2 users 
+## min and max date to see time frame
+da_averages <- daily_activity_v2 %>%
+   group_by(Id) %>%
+   summarise(total_records=n(),
+             average_steps= mean(TotalSteps),
+             average_distance= mean(TotalDistance),
+             average_VA_minutes= mean(VeryActiveMinutes),
+             average_FA_minutes= mean(FairlyActiveMinutes),
+             average_LA_minutes= mean(LightlyActiveMinutes),
+             average_SED_minutes= mean(SedentaryMinutes),
+             average_SED_hours= mean(SedentaryHours),
+             average_cal= mean(Calories),
+             min_date= min(ActivityDate), max_date= max(ActivityDate))
+
+glimpse(da_averages)
+```
+
+From the daily_activity data frame, I filtered out some repetitive columns with very little information. Next, I made a column for sedentary hours to understand the information easier in daily_activity_v2. I then made a mean summary of each column per user ID, with the total number of rows (days recorded) per ID in a column named total_records.   
+
+```{r da_averages, echo=TRUE}
+# Boxplot for total_records
+ggplot(data = da_averages, aes(x = factor(1), y = total_records)) +
+  geom_boxplot() +
+  theme_minimal()+
+  labs(title= "Daily Activity Records")
+
+# Average total records (days worth of data) in daily_activity_v2 = 28.5
+summarize(da_averages, avg_records= mean(total_records))
+## user Id: 4057192912 has 4 days worth of data 
+```
+
+I noticed some total_records (days recorded) fall far below average. Especially one user with only four days' worth of data recorded. I considered removing some of these irregularities, but I would ask about this first to understand why and gather more information. 
+
+```{r daily_activity_2 sort, echo=TRUE}
+
+# sort TotalSteps  
+daily_activity_v2 %>% 
+  select(TotalSteps, SedentaryHours) %>% 
+  arrange(TotalSteps)
+
+# Check for 0 activity 0 steps: 72 Rows with no steps and 24 hours of sedentary activity 
+daily_activity_v2 %>%
+  filter(SedentaryHours== 24, TotalSteps== 0) %>% 
+  summarise(total_records= n())
+
+# Check per user zero activity 
+daily_activity_v2 %>%
+  group_by(Id) %>% 
+  filter(SedentaryHours== 24, TotalSteps== 0) %>% 
+  summarise(total_records= n())
+
+# Box plot for total steps/ over 25,000 steps outside norm
+ggplot(data = daily_activity_v2, aes(x = factor(1), y = TotalSteps)) +
+  geom_boxplot() +
+  theme_minimal()+
+  labs(title="Daily Activity Total Steps")
+```
+
+In daily_activity_v2, I checked TotalSteps and SedentaryHours to see how often zero activity was recorded and looked for above-average values. There are 72 rows with zero steps, distance, activity, and a full day of sedentary activity. I would like to know why there are so many days like this. Does the tracker record activity while it is charging? It is doubtful that the tracker needs to charge for a full day, but maybe some users had battery issues. If a user forgets to wear their device for a day, is this how the data is recorded? Is this normal usage, a product error, or a user error? It could be issues with data collection or migration. I would look for these answers before deleting the data, but these are important issues to raise, especially concerning user behavior.  
+  
+  
+### **daily_sleep** clean up and initial insights
+
+```{r daily_sleep, echo=TRUE}
+# Convert SleepDay from chr to Date:
+daily_sleep$SleepDay <- mdy_hms(daily_sleep$SleepDay) # (HMS but all times are 12:00:00 AM)
+
+# Convert datetime to date:
+daily_sleep$SleepDay <- as.Date(daily_sleep$SleepDay)
+
+# Check for dupes= 3 (total of 413 observations)
+sum(duplicated(daily_sleep))
+## Look at dupes, they need to go
+Sleep_dupes <- daily_sleep[duplicated(daily_sleep), ]
+### drop dupes with distinct (total of 410 observations)
+daily_sleep <- distinct(daily_sleep)
+
+# Number of distinct users = 24 
+summarise(daily_sleep, sleep_user_count= n_distinct(Id))
+
+glimpse(daily_sleep)
+```
+
+When changing SleepDay from a character to a date data type, I noticed it had Hour/Min/Sec, but every hour was the same at 12:00:00. I then converted the date to YMD date type. The number of user IDs in daily_sleep is 24, and there were three duplicate records to delete, dropping the observations from 413 to 410.
+
+
+```{r daily_sleep_v2, echo=TRUE}
+# summarize daily_sleep (Generally one sleep record per day)
+daily_sleep %>%  
+  select(TotalSleepRecords,
+         TotalMinutesAsleep,
+         TotalTimeInBed) %>%
+  summary()
+
+
+# Filter out TotalSleepRecords, not sure what it means most have only one
+daily_sleep_v2 <- daily_sleep %>% 
+  select(-TotalSleepRecords)
+
+# Summary per Id
+daily_sleep_Summary <- daily_sleep_v2 %>%
+  group_by(Id) %>%
+  summarise(total_records=n(),
+            average_minutes_asleep= mean(TotalMinutesAsleep),
+            total_sleep_minutes= sum(TotalMinutesAsleep),
+            average_minutes_inbed= mean(TotalTimeInBed), 
+            total_minutes_inbed= sum(TotalTimeInBed))
+
+# Average days recorded = 17.1
+summarize(daily_sleep_Summary, avg_days_recorded= mean(total_records))
+
+head(daily_sleep_Summary)
+
+# Plot for Total Minutes Asleep
+ggplot(data = daily_sleep, aes(x = 1, y = TotalMinutesAsleep)) +
+  geom_boxplot() +
+  theme_minimal()+
+  labs(title="Total Minutes Asleep")
+# Over 700 and under about 150 minutes outside norm
+```
+
+The daily_sleep summary reveals that there are no zero values in the columns. It is unclear what the column TotalSleepRecords is. The average is 1.12 records per row, but it does not seem helpful, so I filtered it out to make daily_sleep_v2. I summarized daily_sleep_v2 to see the number of days recorded and averages per user in daily_sleep_summary. There is very inconsistent usage of the sleep recording feature. Out of 31 possible days and 33 users, the average number of sleep days recorded is 17 days, with only 24 users. Any analysis made with this data frame will be weak, but it would be interesting to see if there is any correlation between sleep and daily activity.     
+
+### **heart_rate** clean up and initial insights
+
+```{r heart_rate, echo=TRUE}
+# change Time column from chr to datetime, convert am/pm
+heart_rate$Time <- parse_date_time(heart_rate$Time, "%m/%d/%y %I:%M:%s %p")
+
+# Number of distinct users = 14 
+summarise(heart_rate, heartrate_user_count= n_distinct(Id))
+
+# Check for Dupes= 0
+sum(duplicated(heart_rate))
+
+glimpse(heart_rate)
+
+heart_rate %>%  # Fairly certain that Value is the heart rate taken
+  select(Value) %>%
+  summary()
+
+# Summarize heart_rate
+## Pull date to see how many days were used
+heart_rate_summary <- heart_rate %>%
+  mutate(Date= as.Date(Time)) %>%  # date from dttm
+  group_by(Id) %>%
+  summarise(total_records= n(),
+    total_days= n_distinct(Date),
+    average_heart_rate= mean(Value))
+
+head(heart_rate_summary)
+
+# Average days recorded = 23.9
+summarize(heart_rate_summary, avg_records= mean(total_days))
+
+```
+ The heart_rate data frame has heart rate readings per user for every 5 seconds. I changed the AM/PM character date to a date time, there are only 14 users in this data set, and no duplicate records. Since the only values in the data frame are Id, Date, and Value, I'd say Value is the heart rate. With an average of about 24 days recorded per user there is consistent usage of the heart rate function. With so few users, I don't think this data frame will be useful for analysis. 
+
+### **weight_log** clean up and initial insights
+
+```{r weight_log, echo=TRUE}
+
+# change date column from chr to datetime, convert am/pm:
+weight_log$Date <- parse_date_time(weight_log$Date, "%m/%d/%y %I:%M:%s %p")
+
+# Number of distinct users= 8 
+summarise(weight_log, weight_user_count= n_distinct(Id))
+
+# check for Dupes= 0
+sum(duplicated(weight_log))
+
+glimpse(weight_log)
+
+# summarize weight_log
+# T=1/F=0
+weight_log_Summary <- weight_log %>%
+  group_by(Id) %>%
+  summarise(total_records=n(),
+            average_wight_lb= mean(WeightPounds),
+            average_BMI= mean(BMI),
+            total_true_manual= sum(IsManualReport),
+            percent_true_manual= mean(IsManualReport)*100)
+
+# Average days recorded = 8.4
+summarize(weight_log_Summary, avg_records= mean(total_records))
+
+head(weight_log_Summary)
+
+```
+
+ I changed the date from character to date time, checked for the number of users and duplicates, and made a summary per user ID. There are only eight users in the weight_log data frame and very inconsistent entries per user. There is a logical T/F column called "Is Manual Report," I am speculating that some of these wellness tracker devices connect to a scale for the user to weigh themselves, or they have to manually enter their weight into the app. In cases where manual= TRUE, 100% of the entries for that user are manual, and 5 out of 8 users registered their weight manually. With only eight users, this data set might provide some slight understanding of user behavior, but that number hardly represents a population.  
+
+### **hourly_intensity** clean up and initial insights
+```{r hourly_intensity, echo=TRUE}
+# Convert hourly_intensity from chr to datetime, convert am/pm 
+hourly_intensity$ActivityHour <- parse_date_time(hourly_intensity$ActivityHour, "%m/%d/%y %I:%M:%s %p")
+
+# Number of distinct users = 33 
+summarise(hourly_intensity, intensity_user_count= n_distinct(Id))
+
+# Check for Dupes= 0
+sum(duplicated(hourly_intensity))
+
+# Summarize Intensity 
+hourly_intensity %>%  
+  select(TotalIntensity, AverageIntensity) %>%
+  summary()
+
+# Summarize hourly_intensity
+## Pull date to see how many days were used
+hourly_intensity_summary <- hourly_intensity %>%
+  mutate(Date= as.Date(ActivityHour)) %>%  # date from dttm
+  group_by(Id) %>%
+  summarise(total_records= n(),
+    total_days= n_distinct(Date),
+    average_intensity= mean(TotalIntensity))
+
+# Boxplot for total_records
+ggplot(data = hourly_intensity_summary, aes(x = factor(1), y = total_records)) +
+  geom_boxplot() +
+  theme_minimal()+
+  labs(title="Hourly Intensities Records")
+
+glimpse(hourly_intensity_summary)
+
+# Average total records (days worth of data) = 28.3
+summarize(hourly_intensity_summary, avg_days= mean(total_days))
+## user Id: 4057192912 has 4 days worth of data (Same as daily_activity) 
+```
+
+In hourly_intensity, I changed the character date to date time and noticed this set lists every hour of the day and how much intensity was recorded during those hours per user. There are 33 users, no duplicates, and an average of 28 days recorded. I had a feeling that this data frame had the same usage from users as the daily_actity data frame, but to make sure, I made a boxplot and summary of days recorded and the number of records. The days recorded, average days, and box plot are all very similar to daily_activity. It will be interesting to see which hours of the day are more active for users.   
+
+  
+### **hourly_steps** clean up and initial insights
+```{r hourly_steps, echo=TRUE}
+# Convert chr date to datetime. convert am/pm
+hourly_steps$ActivityHour <- parse_date_time(hourly_steps$ActivityHour, "%m/%d/%y %I:%M:%s %p")
+
+# Number of distinct users= 33 
+summarise(hourly_steps, steps_user_count= n_distinct(Id))
+
+# Check for Dupes= 0
+sum(duplicated(hourly_steps))
+
+# Summarize steps 
+hourly_steps %>% 
+  select(StepTotal) %>% 
+  summary()
+
+# Summarize hourly_steps
+## Pull date to see how many days were used
+hourly_steps_summary <- hourly_steps %>%
+  mutate(Date= as.Date(ActivityHour)) %>%  # date from dttm
+  group_by(Id) %>%
+  summarise(total_records= n(),
+    total_days= n_distinct(Date),
+    average_steps= mean(StepTotal))
+
+# Boxplot for total_records
+ggplot(data = hourly_steps_summary, aes(x = factor(1), y = total_records)) +
+  geom_boxplot() +
+  theme_minimal()+
+  labs(title="Hourly Steps Records")
+
+glimpse(hourly_steps_summary)
+
+
+# Average total records (days worth of data) = 28.3
+summarize(hourly_steps_summary, avg_days= mean(total_days))
+ 
+```
+
+ Like hourly_intensities, this data frame needed the date to be cleaned, has 33 users, no duplicates, an average of 28.3 days recorded, and tracks every hour with steps recorded per hour. 
+  
+  
+  
+## <span style= "color:#f28b74;">Analysis and Visualizations</span>
+
+  
+### **Analysis of Distinct Features**
+  
+#### To better understand user behavior, I took each unique data set's total user ID numbers to compare user participation for each feature.   
+```{r Four frame graph, echo=TRUE}
+# Create id_counts to store counts of unique Id values in the Id columns (users) from:
+# daily_activity_v2, heart_rate, daily_sleep_v2, and weight_log
+###length(unique(df$Id)) counts the number of unique "Id" values in each data frame 
+id_counts <- data.frame(
+  tracked_data= c("Daily Activity", "Heart Rate", "Daily Sleep", "Weight Log"),
+  Count= c(
+    length(unique(daily_activity_v2$Id)),
+    length(unique(heart_rate$Id)),
+    length(unique(daily_sleep_v2$Id)),
+    length(unique(weight_log$Id))
+  )
+)
+
+head(id_counts)
+
+# Create bar graph to represent data frames and unique Id values
+ggplot(id_counts, aes(x = tracked_data, y = Count)) +
+  geom_bar(stat = "identity", fill = "deepskyblue3") +
+  theme_minimal() +
+  theme(plot.title= element_text(color= "#f28b74", size= 18))+
+  labs(title= "Number of Users per Wellness Dataset", 
+       subtitle= "Each dataset measures different metrics",
+       x= "Wellness Dataset",
+       y= "Number of Users", 
+       caption= "Total number of participants in this study = 33")
+
+
+
+```
+
+The Daily Activity data set recorded step, distance, activity levels, and calorie data for all 33 participants. The Daily Sleep data set recorded the minutes of sleep and time in bed data for 24 users per day. The Heart Rate data set includes a heart rate reading every 5 seconds for 14 users. The Weight Log data set includes weight, BMI, and if the weight was manually reported for eight users. Most participants in the study used the features in Daily Activity, and the least used the Weight Log.      
+
+### **Daily Activity Metrics**
+
+```{r minutes per user, echo=TRUE}
+
+# Plot Types of activity
+ggplot(daily_activity_v2, aes(x= ActivityDate, group= Id)) +
+  geom_line(aes(y= VeryActiveMinutes, color= "Very Active Minutes")) +
+  geom_line(aes(y= FairlyActiveMinutes, color= "Fairly Active Minutes")) +
+  geom_line(aes(y= LightlyActiveMinutes, color= "Lightly Active Minutes")) +
+  geom_line(aes(y= SedentaryMinutes, color= "Sedentary Minutes")) +
+  labs(y= "Minutes", x= "Date",
+       title= "Activity Levels Over Time",
+       subtitle = "Per Minute, by User Id",
+       caption= "33 Participants were studied over 31 days") +
+  scale_color_manual(values= c(
+    "Very Active Minutes"= "#cd2026",
+    "Fairly Active Minutes"= "#0071bc",
+    "Lightly Active Minutes"= "#2e8540",
+    "Sedentary Minutes"= "#4c2c92"
+   )) +
+  theme_minimal()+
+  theme(axis.text.x= element_text(angle= 48, hjust= 1), 
+        plot.title= element_text(color= "#f28b74", size= 18))+
+  facet_wrap(~Id)
+
+# Participants used their devices to record this data for an average of 28.5 days
+
+```
+ In the Daily Activity data set, there were some inconsistencies were some users recorded fewer days than others. Participants used their devices to record this data for an average of 28.5 days. On average, users spent most of the day being sedentary. Light Activity was the most popular activity, which most likely consists of walking. Most users did not engage in *Very Active*, or *Fairly Active* types of activity regularly.    
+
+
+### **Sedentary Hours Vs. Steps**
+```{r sedentary hours vs steps, echo=TRUE}
+
+ggplot(data= daily_activity_v2, aes(x= TotalSteps, y= SedentaryHours)) + 
+  geom_point() + 
+  geom_smooth(method = "lm", se= FALSE) +
+  geom_jitter()+
+  geom_smooth(data = subset(daily_activity_v2, SedentaryHours > 0 & SedentaryHours < 24 &
+                              TotalSteps > 0 & TotalSteps < 25000),
+              method = "lm", se = FALSE, color = "#FE6100") +
+  theme_minimal()+
+  theme(plot.title= element_text(color= "#f28b74", size= 18))+
+  labs(y= "Sedentary Hours",
+       x= "Total Steps", 
+       title="Sedentary Hours vs Steps Taken per Day")+
+  annotate("text", x=20000, y= 3, label= "The shorter red line ignores outliers",
+           color= "#FE6100", size= 4.8)
+
+# #FE6100 Only plots within parameters of subset >Min $ <Max for sedentary hours and steps
+```
+
+There is a slight correlation where steps increase, sedentary time decreases. The red line ignores extremes in the data, including full days of sedentary hours, no steps, and steps over 25,000 in a day. There were 72 days of no steps or activity recorded throughout the study. I used the red line to show a trend line without this data because it is unclear why so many days were recorded with zero steps. More information is needed about user behavior, device capabilities, and how the data was captured.   
+ 
+### **Total Bedtime Vs. Sleep time**
+```{r sleep, echo=TRUE}
+# Plot minutes asleep vs time in bed 
+ggplot(data= daily_sleep_v2, aes(x= TotalMinutesAsleep, y= TotalTimeInBed)) + 
+  geom_point() +
+  geom_smooth()+
+  theme_minimal()+
+  theme(plot.title= element_text(color= "#f28b74", size= 18))+
+  labs(title= "Total Bedtime Vs. Sleep Time", 
+       y= "Total Minutes in Bed",
+       x= "Total Minutes Asleep",
+       caption= "24 users recorded sleep habits")
+
+# Positive relationship between spending more time in bed and getting more sleep
+```
+Out of 31 participants, only 24 recorded their sleep habits. A positive relationship exists between spending more time in bed and getting more sleep, which naturally makes sense. 
+
+
+### **Total Minutes asleep per day, per user**
+```{r TotalMinutesAsleep per Day, echo=TRUE}
+
+# Plot TotalMinutesAsleep per SleepDay Per User
+ggplot(daily_sleep_v2) +
+  geom_line(mapping=aes(x=SleepDay, y=TotalMinutesAsleep, group=Id),color= "#ee6344") +
+  facet_wrap(~Id)+
+  theme_minimal()+
+  theme(axis.text.x= element_text(angle= 45, hjust= 1), 
+        plot.title= element_text(color= "#f28b74", size= 18)) +
+  labs(y= "Total Sleep Minutes", x= "Date",
+       title= "Daily Minutes Alseep",
+       subtitle= "For Every User Id")
+
+# User Id 2320127002 only has one day recorded with 61 minutes asleep 
+```
+
+A look at individual sleep graphs shows inconsistent usage of the sleep feature. On average, users recorded 17 days' worth of sleep. It would help to know how the device records sleep, user-friendliness, and whether it is comfortable to wear to bed. 
+
+### **Merge Daily Activity with Daily Sleep**
+```{r daily_sleep_act, echo=TRUE}
+# Prep to merge daily_sleep_v2 and daily_activity_v2
+# joining on date and Id to make sure the observation of both stay intact
+# daily_activity_v2 has 940 obs. daily_sleep_v2 has 410 obs.
+
+# daily_sleep_v2 rename date for merging data with daily_activity
+daily_sleep_v3 <- daily_sleep_v2 %>% 
+  rename(Date= SleepDay) 
+
+# Rename ActivityDate to Date for easier merging in daily_activity
+daily_activity_v3 <- daily_activity_v2 %>% 
+  rename(Date=ActivityDate)
+
+# Left Join daily_sleep and daily_activity:
+daily_sleep_act <- merge(daily_sleep_v3, daily_activity_v3, by= c("Id", "Date"), all.x= TRUE)
+# total 410 obs. 
+
+# Checking merged data frame for issues
+# Total user count= 24
+summarise(daily_sleep_act, total_user_count= n_distinct(Id))
+# Check for dupes= 0
+sum(duplicated(daily_sleep_act))
+
+# summarize daily_sleep_act 
+daily_sleep_act %>%  
+  select(TotalMinutesAsleep,
+         TotalTimeInBed, TotalSteps, 
+         TotalDistance, SedentaryMinutes,
+         LightlyActiveMinutes, FairlyActiveMinutes,
+         VeryActiveMinutes) %>%
+  summary()
+
+```
+I left merged daily_sleep and dailiy_activity based on "Id" and "Date" to see if there are any trends between activity, steps, and sleep. There are 530 more observations in daily_activity, so I merged it to the smaller set (daily_sleep) to avoid causing N/A observations. I also checked for duplicates and total user count and ran a summary to ensure no issues in the new daily_sleep_act data frame.
+
+### **Minutes Asleep Vs. Steps**
+```{r sleep vs. steps, echo=TRUE}
+# No real correlation Sleep vs. Steps
+ggplot(data=daily_sleep_act, aes(x= TotalSteps, y= TotalMinutesAsleep)) +
+  geom_point() +
+  geom_smooth(method = "lm", se= FALSE) +
+  theme_minimal()+
+  theme(plot.title= element_text(color= "#f28b74", size= 18)) +
+  labs(y= "Total Minutes Asleep",
+       x= "Total Steps",
+       title= "Time Spent Asleep Vs. Total Steps")
+
+```
+
+  There is an extremely weak to no correlation between Minutes Asleep and Total Steps. There is not a strong relationship between the variables. 
+
+### **Minutes Asleep Vs. Sedentary Minutes**
+
+```{r Sleep Vs. Sedentary, echo=TRUE}
+# Moderate negative correlation
+ggplot(data=daily_sleep_act, aes(x= SedentaryMinutes, y= TotalMinutesAsleep)) + 
+  geom_point() +
+  geom_smooth(method = "lm", se = FALSE) + 
+  geom_smooth(data = subset(daily_sleep_act, SedentaryMinutes >= 250 & SedentaryMinutes <= 1250 &
+                              TotalMinutesAsleep >= 150 & TotalMinutesAsleep <= 700),
+              method = "lm", se = FALSE, color = "#FE6100") +
+  theme_minimal()+
+  theme(plot.title= element_text(color= "#f28b74", size= 18)) +
+  labs(title= "Total Minutes Asleep Vs. Sedentary Minutes",
+       x= "Sedentary Minutes",
+       y= "Total Minutes Asleep")+
+  annotate("text", x= 320, y= 150,
+           label="The shorter red line ignores outliers", 
+           color= "#FE6100", size= 4.8)
+# Added red subset line to disregard some outliers based on box plots
+# of both TotalMinutesAsleep and SedentaryMinutes.Only plots w/i parameters of subset >Min $ <Max
+```
+
+ There is a negative correlation between Minutes Asleep and Sedentary Minutes. As Sedentary Mintues increase, sleep duration decreases. Ignoring the extremes in the data flattens the trend out a bit. Spending less time in a sedentary position during the day could lead to more sleep time at night.
+
+
+### **Hourly Intensity**
+```{r hourly_intensity graph, echo=TRUE}
+# (format(ActivityHour, "%H"))...format dttm and extract hour part of the time stamp. 
+#  x= as.factor converts the hour to a factor data type to make it categorical
+# stat_summary() summary statistic, use fun= "mean" to set the function applied to data
+
+ggplot(hourly_intensity, aes(x= as.factor(format(ActivityHour, "%H")), y= TotalIntensity)) +
+  stat_summary(fun= "mean", geom= "bar", fill= "#1E88E5") +
+  theme_minimal() +
+  theme(plot.title= element_text(color= "#f28b74", size= 18)) +
+  labs(title= "Average Intensity Per Hour",
+       x= "Hour of the Day",
+       y= "Average Intensity")
+
+#5pm to 7pm are the most active times 
+```
+
+ Peak times for intensities are from 5:00 p.m. to 7:00 p.m. This suggests that most users register higher intensities after work hours and likely have 9 to 5 jobs.  
+
+### **Hourly Steps**
+```{r hourly_steps graph, echo=TRUE}
+
+ggplot(hourly_steps, aes(x= as.factor(format(ActivityHour, "%H")), y= StepTotal)) +
+  stat_summary(fun= "mean", geom= "bar", fill= "#1E88E5") +
+  theme_minimal()+
+  theme(plot.title= element_text(color= "#f28b74", size= 18)) +
+  labs(title= "Average Steps Per Hour",
+       x= "Hour of the Day",
+       y= "Average Steps")
+
+# 6pm and 7pm most active 
+```
+
+ Average Steps per hour have a similar pattern to Average Intensities per hour. The peak of activity is after work hours, but mostly between 6:00 p.m. and 7:00 p.m.  
+
+## <span style= "color:#f28b74;">Action</span>
+
+### Conclusions and Further Steps
+  
+
+* __Trends in smart device usage__
+
+  * The participants in this study used functions like recording steps, calories, distance, and activity levels in the Daily Activity data set more consistently than other functions. The most popular daily activity is Light Activity; on average, users spend 3.21 hours daily engaging in light activities. Users spent less than an hour daily doing very active and fairly active activities combined. Generally, sedentary time decreases as steps taken per day increase.      
+
+  * The sleep function had a decent amount of participation but not enough to see many strong trends. Users will get more sleep if they spend less time in a sedentary position daily and plan to be in bed when needed.    
+
+  * Users registered their highest average intensities from 5:00 to 7:00 p.m., which shows that they prefer to exercise after working hours. Average steps per hour follow a similar pattern; users walk the most between 6:00 and 7:00 p.m.  
+
+  * The heart rate and Weight functions had much less participation from the users in this study and may suggest that they are either difficult to use or not included in every device.
+  
+
+
+* __How these trends apply to Bellabeat's customers__
+ 
+  * Most users spend their days in sedentary positions, registering lower activity levels. They have office jobs because activity and steps go up after 5:00 p.m. Activity and steps get a minor boost between noon and 2:00 p.m., which happens during lunch. These customers could benefit from an alarm that reminds them when they have been sitting for too long.  
+ 
+  * To ensure that users can measure sleep benefits, I recommend a setting in the app for users to set a regular bedtime and a reminder to wear their device to bed.
+
+  * According to [mayoclinic.org](https://www.mayoclinic.org/healthy-lifestyle/fitness/in-depth/10000-steps/art-20317391#:~:text=The%20average%20American%20walks%203%2C000,a%20day%20every%20two%20weeks.) "The average American walks 3,000 to 4,000 steps a day or roughly 1.5 to 2 miles." Wellness tracker users in this study took an average of 7,638 steps per day, slightly above the average American. These consumers are most likely concerned with getting a certain number of steps in their day over intense workouts. They would benefit from a goal tracker to see how many steps they have achieved in a day and how many more they need to succeed.  
+  
+
+* __Marketing Strategy__
+  * Bellabeat products and services are marketed toward women, and this data shows that consumers of these wellness trackers like to walk and tend to keep their activity light.
+  
+    * My suggestion is to have a communication hub or forum connected to the Bellabeat app where users can join up with local Bellabeat walking groups or clubs. The forum would need to be moderated for safety and have guidelines and rules for users to follow.
+    
+    * Lighter activity levels make it easier to be social and have conversations with other walkers. Users should be able to create groups to meet up and accomplish group goals where they can pool together their activity. Bellabeat could then run competitions and charity events where groups could register to win something for their community if they have the most steps. Users could also check in with group members, especially if they are walking alone.  
+  
+  
+
+
