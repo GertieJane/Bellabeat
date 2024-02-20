@@ -89,7 +89,7 @@ list_named <- list('daily_activity'= daily_activity,
                    'hourly_intensity'= hourly_intensity,
                    'hourly_steps'= hourly_steps)
                    
-head(list_named)
+glimpse(list_named)
 ```
 
 
