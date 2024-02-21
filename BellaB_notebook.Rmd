@@ -164,11 +164,11 @@ glimpse(da_averages)
 From the daily_activity data frame, I filtered out some repetitive columns with very little information. Next, I made a column for sedentary hours to understand the information easier in daily_activity_v2. I then made a mean summary of each column per user ID, with the total number of rows (days recorded) per ID in a column named total_records.   
 
 ```{r da_averages, echo=TRUE}
-# Boxplot for total_records
+#Boxplot for total_records to show what falls outside of the average
 ggplot(data = da_averages, aes(x = factor(1), y = total_records)) +
   geom_boxplot() +
   theme_minimal()+
-  labs(title= "Daily Activity Records")
+  labs(title="Daily Activity Records Distribution", subtitle="Days recorded per user", y= "Count of Records", x= "All Records")
 
 # Average total records (days worth of data) in daily_activity_v2 = 28.5
 summarize(da_averages, avg_records= mean(total_records))
@@ -199,7 +199,7 @@ daily_activity_v2 %>%
 ggplot(data = daily_activity_v2, aes(x = factor(1), y = TotalSteps)) +
   geom_boxplot() +
   theme_minimal()+
-  labs(title="Daily Activity Total Steps")
+  labs(title="Daily Activity Steps Distribution",subtitle= "Total steps per user", y= "Count of Total Steps", x="Total Steps")
 ```
 
 In daily_activity_v2, I checked TotalSteps and SedentaryHours to see how often zero activity was recorded and looked for above-average values. There are 72 rows with zero steps, distance, activity, and a full day of sedentary activity. I would like to know why there are so many days like this. Does the tracker record activity while it is charging? It is doubtful that the tracker needs to charge for a full day, but maybe some users had battery issues. If a user forgets to wear their device for a day, is this how the data is recorded? Is this normal usage, a product error, or a user error? It could be issues with data collection or migration. I would look for these answers before deleting the data, but these are important issues to raise, especially concerning user behavior.  
@@ -261,7 +261,7 @@ head(daily_sleep_Summary)
 ggplot(data = daily_sleep, aes(x = 1, y = TotalMinutesAsleep)) +
   geom_boxplot() +
   theme_minimal()+
-  labs(title="Total Minutes Asleep")
+  labs(title="Minutes Asleep Distribution", subtitle="Total minutes per user", y= "Count of Minutes Asleep", x= "Total Minutes asleep")
 # Over 700 and under about 150 minutes outside norm
 ```
 
@@ -361,12 +361,6 @@ hourly_intensity_summary <- hourly_intensity %>%
     total_days= n_distinct(Date),
     average_intensity= mean(TotalIntensity))
 
-# Boxplot for total_records
-ggplot(data = hourly_intensity_summary, aes(x = factor(1), y = total_records)) +
-  geom_boxplot() +
-  theme_minimal()+
-  labs(title="Hourly Intensities Records")
-
 glimpse(hourly_intensity_summary)
 
 # Average total records (days worth of data) = 28.3
@@ -374,7 +368,7 @@ summarize(hourly_intensity_summary, avg_days= mean(total_days))
 ## user Id: 4057192912 has 4 days worth of data (Same as daily_activity) 
 ```
 
-In hourly_intensity, I changed the character date to date time and noticed this set lists every hour of the day and how much intensity was recorded during those hours per user. There are 33 users, no duplicates, and an average of 28 days recorded. I had a feeling that this data frame had the same usage from users as the daily_actity data frame, but to make sure, I made a boxplot and summary of days recorded and the number of records. The days recorded, average days, and box plot are all very similar to daily_activity. It will be interesting to see which hours of the day are more active for users.   
+In hourly_intensity, I changed the character date to date time and noticed this set lists every hour of the day and how much intensity was recorded during those hours per user. There are 33 users, no duplicates, and an average of 28 days recorded. The number of users and average days are all very similar to daily_activity. It will be interesting to see which hours of the day are more active for users.   
 
   
 ### **hourly_steps** clean up and initial insights
@@ -401,12 +395,6 @@ hourly_steps_summary <- hourly_steps %>%
   summarise(total_records= n(),
     total_days= n_distinct(Date),
     average_steps= mean(StepTotal))
-
-# Boxplot for total_records
-ggplot(data = hourly_steps_summary, aes(x = factor(1), y = total_records)) +
-  geom_boxplot() +
-  theme_minimal()+
-  labs(title="Hourly Steps Records")
 
 glimpse(hourly_steps_summary)
 
@@ -462,27 +450,32 @@ The Daily Activity data set recorded step, distance, activity levels, and calori
 ### **Daily Activity Metrics**
 
 ```{r minutes per user, echo=TRUE}
+#For following plot activity order to make the legend better: 
+activity_order <- c("Sedentary", "Lightly Active",
+                    "Fairly Active","Very Active")
 
 # Plot Types of activity
 ggplot(daily_activity_v2, aes(x= ActivityDate, group= Id)) +
-  geom_line(aes(y= VeryActiveMinutes, color= "Very Active Minutes")) +
-  geom_line(aes(y= FairlyActiveMinutes, color= "Fairly Active Minutes")) +
-  geom_line(aes(y= LightlyActiveMinutes, color= "Lightly Active Minutes")) +
-  geom_line(aes(y= SedentaryMinutes, color= "Sedentary Minutes")) +
-  labs(y= "Minutes", x= "Date",
+  geom_line(aes(y= VeryActiveMinutes/ 60, color= "Very Active")) +
+  geom_line(aes(y= FairlyActiveMinutes/ 60, color= "Fairly Active")) +
+  geom_line(aes(y= LightlyActiveMinutes/ 60, color= "Lightly Active")) +
+  geom_line(aes(y= SedentaryMinutes/ 60, color= "Sedentary")) +
+  labs(y= "Hours", x= "Date",
        title= "Activity Levels Over Time",
-       subtitle = "Per Minute, by User Id",
-       caption= "33 Participants were studied over 31 days") +
+       subtitle = "Per Hour, by User Id",
+       caption= "33 Participants were studied over 31 days",
+       color= "Activity Type") +
   scale_color_manual(values= c(
-    "Very Active Minutes"= "#cd2026",
-    "Fairly Active Minutes"= "#0071bc",
-    "Lightly Active Minutes"= "#2e8540",
-    "Sedentary Minutes"= "#4c2c92"
-   )) +
+    "Very Active"= "#cd2026",
+    "Fairly Active"= "#0071bc",
+    "Lightly Active"= "#2e8540",
+    "Sedentary"= "#4c2c92"
+   ), breaks= activity_order) +
   theme_minimal()+
   theme(axis.text.x= element_text(angle= 48, hjust= 1), 
-        plot.title= element_text(color= "#f28b74", size= 18))+
-  facet_wrap(~Id)
+        plot.title= element_text(color= "#f28b74", size= 18), 
+        )+
+    facet_wrap(~Id)
 
 # Participants used their devices to record this data for an average of 28.5 days
 

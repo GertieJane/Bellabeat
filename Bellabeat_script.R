@@ -7,6 +7,7 @@ library(here)
 
 #only need to run this once:
 dir.create("images")
+
 # This study included 33 participants using a fit bit device to record personal wellness
 ## Starting on April 12, 2016 and ending on May 12, 2016
 
@@ -83,7 +84,7 @@ da_averages <- daily_activity_v2 %>%
 ggplot(data = da_averages, aes(x = factor(1), y = total_records)) +
   geom_boxplot() +
   theme_minimal()+
-  labs(title="Daily Activity Records")
+  labs(title="Daily Activity Records", subtitle="Days recorded per user", y= "Count of Records", x= "All Records")
 
 ##Average total records (days worth of data) in daily_activity_v2 = 28.5
 summarize(da_averages, avg_records= mean(total_records))
@@ -142,30 +143,75 @@ ggplot(id_counts, aes(x = tracked_data, y = Count)) +
   
 ###### changing from "deepskyblue" to F number 
 
-
+#For following plot activity order to make the legend better: 
+activity_order <- c("Sedentary", "Lightly Active",
+                    "Fairly Active","Very Active")
 
 # Plot Types of activity
+ggplot(daily_activity_v2, aes(x= ActivityDate, group= Id)) +
+  geom_line(aes(y= VeryActiveMinutes, color= "Very Active")) +
+  geom_line(aes(y= FairlyActiveMinutes, color= "Fairly Active")) +
+  geom_line(aes(y= LightlyActiveMinutes, color= "Lightly Active")) +
+  geom_line(aes(y= SedentaryMinutes, color= "Sedentary")) +
+  labs(y= "Minutes", x= "Date",
+       title= "Activity Levels Over Time",
+       subtitle = "Per Minute, by User Id",
+       caption= "33 Participants were studied over 31 days",
+       color= "Activity Type") +
+  scale_color_manual(values= c(
+    "Very Active"= "#cd2026",
+    "Fairly Active"= "#0071bc",
+    "Lightly Active"= "#2e8540",
+    "Sedentary"= "#4c2c92"
+   ), breaks= activity_order) +
+  scale_y_continuous(breaks= seq(0, 24, 4))+
+  theme_minimal()+
+  theme(axis.text.x= element_text(angle= 48, hjust= 1), 
+        plot.title= element_text(color= "#f28b74", size= 18),
+        aspect.ratio= .5
+        )+
+    facet_wrap(~Id)
+## vjust=1 moves the labels down (doesn't do much), hjust= 1 right justifies the text(hjust is good for angled text)
+## hjust=0 is left justify, hjust= .5 is center text horizontally
+## breaks in the scale_color_manual function will change the order to the activity_order created above
+
+
+
+
+  
+
+
+
+    #scale_y_continuous(
+#      breaks= seq(0, 24, 6)
+
+
+
+
+
+# Plot Types of activity without Sed
 ggplot(daily_activity_v2, aes(x= ActivityDate, group= Id)) +
   geom_line(aes(y= VeryActiveMinutes, color= "Very Active Minutes")) +
   geom_line(aes(y= FairlyActiveMinutes, color= "Fairly Active Minutes")) +
   geom_line(aes(y= LightlyActiveMinutes, color= "Lightly Active Minutes")) +
-  geom_line(aes(y= SedentaryMinutes, color= "Sedentary Minutes")) +
-  labs(y= "Minutes", x= "Date",
+  labs(y= "Minutes of Activity", x= "Date",
        title= "Activity Levels Over Time",
        subtitle = "Per Minute, by User Id",
        caption= "33 Participants were studied over 31 days") +
   scale_color_manual(values= c(
     "Very Active Minutes"= "#cd2026",
     "Fairly Active Minutes"= "#0071bc",
-    "Lightly Active Minutes"= "#2e8540",
-    "Sedentary Minutes"= "#4c2c92"
-   )) +
+    "Lightly Active Minutes"= "#2e8540"
+     )) +
   theme_minimal()+
   theme(axis.text.x= element_text(angle= 48, hjust= 1), 
         plot.title= element_text(color= "#f28b74", size= 18))+
   facet_wrap(~Id)
-## vjust=1 moves the labels down (doesn't do much), hjust= 1 right justifies the text(hjust is good for angled text)
-## hjust=0 is left justify, hjust= .5 is center text horizontally
+
+
+
+
+
 
 
 

@@ -17,8 +17,6 @@ daily_calories <- read_csv("dailyCalories_merged.csv")
 daily_intensities <- read_csv("dailyIntensities_merged.csv")
 daily_steps <- read_csv("dailySteps_merged.csv")
 
-### Mega Script ###################### can I make this list keep the data frame names?
-# maybe reorder so it looks better................will this work on RMark? ??
 
 #list containing all data frames.
 list_of_dfs <- list(daily_activity, daily_sleep_dist, daily_calories, daily_intensities, daily_steps, heart_rate,
@@ -33,17 +31,5 @@ list_named <- list('daily_activity'= daily_activity, 'daily_calories'= daily_cal
                    'minute_sleep'= minute_sleep)
 
 
-# map() from the purrr package to apply a function to each data frame in the list.
-# The function being applied is specified by ~data.frame(Column = names(.), DataType = sapply(., typeof))
-# This function creates a data frame for each data frame in the list, 
-# where "Column" contains the column names (names(.)),
-# and "DataType" contains the corresponding data types (sapply(., typeof)).
-summary_list <- map(list_of_dfs, ~data.frame(Column = names(.), DataType = sapply(., typeof)))
-
-
-# The bind_rows() dplyr combines the individual data frame summaries into a single data frame (summary_df). 
-# .id= "DataFrame" argument ensures that an additional column named "DataFrame" is added to track which data frame
-# each row belongs to.
-summary_df <- bind_rows(summary_list, .id = "DataFrame")
 
 

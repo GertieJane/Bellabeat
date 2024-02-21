@@ -30,10 +30,27 @@ da_totals <- daily_activity_v2 %>%
 
 
 
-########this whole block was a waste of time, Don't think this is important
+########this whole block was a waste of time, Don't think this is important:
+
 ###Make new columns for Date and Time from the POSIXct "ActivityHour" column:
 hourly_intensity$Date <- as.Date(hourly_intensity$ActivityHour)
 hourly_intensity$Time <- format(hourly_intensity$ActivityHour, "%H:%M:%S")
 ###Change Time column to factor for graphing there are a total of 24 hours
 ###this was useless: rolled back to chr for time
 hourly_intensity$Time <- as.factor(hourly_intensity$Time)
+
+
+### did not need after making list_named:
+
+# map() from the purrr package to apply a function to each data frame in the list.
+# The function being applied is specified by ~data.frame(Column = names(.), DataType = sapply(., typeof))
+# This function creates a data frame for each data frame in the list, 
+# where "Column" contains the column names (names(.)),
+# and "DataType" contains the corresponding data types (sapply(., typeof)).
+summary_list <- map(list_of_dfs, ~data.frame(Column = names(.), DataType = sapply(., typeof)))
+
+
+# The bind_rows() dplyr combines the individual data frame summaries into a single data frame (summary_df). 
+# .id= "DataFrame" argument ensures that an additional column named "DataFrame" is added to track which data frame
+# each row belongs to.
+summary_df <- bind_rows(summary_list, .id = "DataFrame")
