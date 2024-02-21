@@ -164,7 +164,7 @@ glimpse(da_averages)
 From the daily_activity data frame, I filtered out some repetitive columns with very little information. Next, I made a column for sedentary hours to understand the information easier in daily_activity_v2. I then made a mean summary of each column per user ID, with the total number of rows (days recorded) per ID in a column named total_records.   
 
 ```{r da_averages, echo=TRUE}
-#Boxplot for total_records to show what falls outside of the average
+#Boxplot for total_records to see outliers in number of days recorded per user
 ggplot(data = da_averages, aes(x = factor(1), y = total_records)) +
   geom_boxplot() +
   theme_minimal()+
@@ -202,7 +202,11 @@ ggplot(data = daily_activity_v2, aes(x = factor(1), y = TotalSteps)) +
   labs(title="Daily Activity Steps Distribution",subtitle= "Total steps per user", y= "Count of Total Steps", x="Total Steps")
 ```
 
-In daily_activity_v2, I checked TotalSteps and SedentaryHours to see how often zero activity was recorded and looked for above-average values. There are 72 rows with zero steps, distance, activity, and a full day of sedentary activity. I would like to know why there are so many days like this. Does the tracker record activity while it is charging? It is doubtful that the tracker needs to charge for a full day, but maybe some users had battery issues. If a user forgets to wear their device for a day, is this how the data is recorded? Is this normal usage, a product error, or a user error? It could be issues with data collection or migration. I would look for these answers before deleting the data, but these are important issues to raise, especially concerning user behavior.  
+In daily_activity_v2, I checked TotalSteps and SedentaryHours to see how often zero activity was recorded and looked for above-average values. Steps over 25,000 per day are beyond the expected range.  
+
+There are 72 rows with zero steps, distance, activity, and a full day of sedentary activity. I would like to know why there are so many zero activity days. Does the tracker record activity while it is charging? Not all users had zero activity days. Maybe some users had battery or device issues. If a user forgets to wear their device for a day, is this how the data is recorded? Is this the result of expected usage,a data collection error, a product error, or a user error? I would look for these answers before deleting the data, but these are important issues to raise, especially concerning user behavior.
+
+
   
   
 ### **daily_sleep** clean up and initial insights
@@ -265,7 +269,9 @@ ggplot(data = daily_sleep, aes(x = 1, y = TotalMinutesAsleep)) +
 # Over 700 and under about 150 minutes outside norm
 ```
 
-The daily_sleep summary reveals that there are no zero values in the columns. It is unclear what the column TotalSleepRecords is. The average is 1.12 records per row, but it does not seem helpful, so I filtered it out to make daily_sleep_v2. I summarized daily_sleep_v2 to see the number of days recorded and averages per user in daily_sleep_summary. There is very inconsistent usage of the sleep recording feature. Out of 31 possible days and 33 users, the average number of sleep days recorded is 17 days, with only 24 users. Any analysis made with this data frame will be weak, but it would be interesting to see if there is any correlation between sleep and daily activity.     
+The daily_sleep summary reveals that there are no zero values in the columns. It is unclear what the column TotalSleepRecords is. The average is 1.12 records per row, but it does not seem helpful, so I filtered it out to make daily_sleep_v2. I summarized daily_sleep_v2 to see the number of days recorded and averages per user in daily_sleep_summary. Over 700 and under about 150 minutes asleep are outside the expected range. 
+  
+There is very inconsistent usage of the sleep recording feature. Out of 31 possible days and 33 users, the average number of sleep days recorded is 17 days, with only 24 users. Any analysis made with this data frame will be weak, but it would be interesting to see if there is any correlation between sleep and daily activity.     
 
 ### **heart_rate** clean up and initial insights
 
@@ -450,7 +456,7 @@ The Daily Activity data set recorded step, distance, activity levels, and calori
 ### **Daily Activity Metrics**
 
 ```{r minutes per user, echo=TRUE}
-#For following plot activity order to make the legend better: 
+#For following plot activity order to put the legend in order: 
 activity_order <- c("Sedentary", "Lightly Active",
                     "Fairly Active","Very Active")
 
@@ -471,9 +477,10 @@ ggplot(daily_activity_v2, aes(x= ActivityDate, group= Id)) +
     "Lightly Active"= "#2e8540",
     "Sedentary"= "#4c2c92"
    ), breaks= activity_order) +
+  scale_y_continuous(breaks= seq(0, 24, 8))+
   theme_minimal()+
   theme(axis.text.x= element_text(angle= 48, hjust= 1), 
-        plot.title= element_text(color= "#f28b74", size= 18), 
+        plot.title= element_text(color= "#f28b74", size= 18),
         )+
     facet_wrap(~Id)
 

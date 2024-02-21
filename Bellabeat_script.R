@@ -149,13 +149,13 @@ activity_order <- c("Sedentary", "Lightly Active",
 
 # Plot Types of activity
 ggplot(daily_activity_v2, aes(x= ActivityDate, group= Id)) +
-  geom_line(aes(y= VeryActiveMinutes, color= "Very Active")) +
-  geom_line(aes(y= FairlyActiveMinutes, color= "Fairly Active")) +
-  geom_line(aes(y= LightlyActiveMinutes, color= "Lightly Active")) +
-  geom_line(aes(y= SedentaryMinutes, color= "Sedentary")) +
-  labs(y= "Minutes", x= "Date",
+  geom_line(aes(y= VeryActiveMinutes/ 60, color= "Very Active")) +
+  geom_line(aes(y= FairlyActiveMinutes/ 60, color= "Fairly Active")) +
+  geom_line(aes(y= LightlyActiveMinutes/ 60, color= "Lightly Active")) +
+  geom_line(aes(y= SedentaryMinutes/ 60, color= "Sedentary")) +
+  labs(y= "Hours", x= "Date",
        title= "Activity Levels Over Time",
-       subtitle = "Per Minute, by User Id",
+       subtitle = "Per Hour, by User Id",
        caption= "33 Participants were studied over 31 days",
        color= "Activity Type") +
   scale_color_manual(values= c(
@@ -164,11 +164,10 @@ ggplot(daily_activity_v2, aes(x= ActivityDate, group= Id)) +
     "Lightly Active"= "#2e8540",
     "Sedentary"= "#4c2c92"
    ), breaks= activity_order) +
-  scale_y_continuous(breaks= seq(0, 24, 4))+
+  scale_y_continuous(breaks= seq(0, 24, 8))+
   theme_minimal()+
   theme(axis.text.x= element_text(angle= 48, hjust= 1), 
         plot.title= element_text(color= "#f28b74", size= 18),
-        aspect.ratio= .5
         )+
     facet_wrap(~Id)
 ## vjust=1 moves the labels down (doesn't do much), hjust= 1 right justifies the text(hjust is good for angled text)
