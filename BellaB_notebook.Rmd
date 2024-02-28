@@ -624,7 +624,7 @@ ggplot(data=daily_sleep_act, aes(x= SedentaryMinutes, y= TotalMinutesAsleep)) +
 # of both TotalMinutesAsleep and SedentaryMinutes.Only plots w/i parameters of subset >Min $ <Max
 ```
 
- There is a negative correlation between Minutes Asleep and Sedentary Minutes. As Sedentary Mintues increase, sleep duration decreases. Ignoring the extremes in the data flattens the trend out a bit. Spending less time in a sedentary position during the day could lead to more sleep time at night.
+ There is a negative correlation between Minutes Asleep and Sedentary Minutes. As Sedentary Minutes increase, sleep duration decreases. Ignoring the extremes in the data flattens the trend out a bit. Spending less time in a sedentary position during the day could lead to more sleep time at night.
 
 
 ### **Hourly Intensity**
